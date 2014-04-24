@@ -159,4 +159,31 @@ describe('Grid factory', function () {
       }
     });
   });
+
+  describe('rowSelect', function() {
+    it('should have an empty selected property when no rows are selected', function() {
+      expect(grid.selectedRows.length).toBe(0);
+    });
+
+    it('should allow single selection via grid.selectRow(index)',
+      function () {
+        grid.selectRow(1);
+        expect(grid.rows[1].selected).toBe(true);
+        expect(grid.selectedRows.length).toBe(1);
+      });
+
+    it('should replace previous selections when keep is false',
+      function () {
+        grid.selectRow(0);
+        expect(grid.rows[0].selected).toBe(true);
+        expect(grid.selectedRows.length).toBe(1);
+        expect(grid.selectedRows[0]).toBe(0);
+        grid.selectRow(1);
+        expect(grid.rows[0].selected).toBe(false);
+        expect(grid.rows[1].selected).toBe(true);
+        expect(grid.selectedRows.length).toBe(1);
+        expect(grid.selectedRows[0]).toBe(1);
+      });
+
+  });
 });

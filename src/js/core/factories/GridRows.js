@@ -14,9 +14,8 @@ angular.module('ui.grid')
   function GridRow(entity, index) {
     this.entity = entity;
     this.index = index;
-
-    // Default to true
     this.visible = true;
+    this.selected = false;
   }
 
   /**
@@ -37,6 +36,7 @@ angular.module('ui.grid')
   };
 
   return GridRow;
+
 }]);
 
 })();

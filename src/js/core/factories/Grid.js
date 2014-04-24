@@ -42,12 +42,17 @@ angular.module('ui.grid')
     //these are wrapped references to the actual data rows (options.data)
     this.rows = [];
 
+    // row selections
+    this.selectedRows = [];
+
     //represents the columns on the grid
     this.columns = [];
 
     //current rows that are rendered on the DOM
     this.renderedRows = [];
     this.renderedColumns = [];
+
+
   };
 
   /**
@@ -600,6 +605,35 @@ angular.module('ui.grid')
 
     return sortedCols;
   };
+
+  /**
+   * @ngdoc function
+   * @name selectRow
+   * @methodOf ui.grid.class:Grid
+   * @description
+   */
+  Grid.prototype.selectRow = function (index, keep) {
+      if (this.selectedRows.indexOf(index) === -1) {
+        if (keep) {
+          this.selectedRows.push(index);
+        } else {
+          for (var i = 0; i < this.selectedRows.length; i++) {
+            this.rows[this.selectedRows[i]].selected = false;
+          }
+          this.selectedRows = [index];
+        }
+        this.rows[index].selected = true;
+      }
+  };
+
+  Grid.prototype.deselectRow = function (index) {
+    var idx = this.selectedRows.indexOf(index);
+    if (idx !== -1) {
+      this.selectedRows.splice(idx, 1);
+    }
+    this.rows[index].selected = false;
+  };
+
 
   /**
    * @ngdoc function
