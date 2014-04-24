@@ -7,8 +7,8 @@
    *  @description factory to return dom specific instances of a grid
    *
    */
-  angular.module('ui.grid').service('gridClassFactory', ['gridUtil', '$q', '$templateCache', 'uiGridConstants', '$log', 'Grid', 'GridColumn', 'GridRow',
-    function (gridUtil, $q, $templateCache, uiGridConstants, $log, Grid, GridColumn, GridRow) {
+  angular.module('ui.grid').service('gridClassFactory', ['gridUtil', '$q', '$compile', '$templateCache', 'uiGridConstants', '$log', 'Grid', 'GridColumn', 'GridRow',
+    function (gridUtil, $q, $compile, $templateCache, uiGridConstants, $log, Grid, GridColumn, GridRow) {
 
       var service = {
         /**
@@ -24,16 +24,44 @@
           options.id = gridUtil.newId();
           var grid = new Grid(options);
 
+          // NOTE/TODO: rowTemplate should always be defined...
+          if (grid.options.rowTemplate) {
+            var rowTemplateFnPromise = $q.defer();
+            grid.getRowTemplateFn = rowTemplateFnPromise.promise;
+            
+            gridUtil.getTemplate(grid.options.rowTemplate)
+              .then(
+                function (template) {
+                  var rowTemplateFn = $compile(template);
+                  rowTemplateFnPromise.resolve(rowTemplateFn);
+                },
+                function (res) {
+                  // Todo handle response error here?
+                  throw new Error("Couldn't fetch/use row template '" + grid.options.rowTemplate + "'");
+                });
+          }
+
           grid.registerColumnBuilder(service.defaultColumnBuilder);
 
-          grid.registerRowBuilder(grid.rowSearcher);
+          // Reset all rows to visible initially
+          grid.registerRowsProcessor(function allRowsVisible(rows) {
+            rows.forEach(function (row) {
+              row.visible = true;
+            });
+
+            return rows;
+          });
+
+          if (grid.options.enableFiltering) {
+            grid.registerRowsProcessor(grid.searchRows);
+          }
 
           // Register the default row processor, it sorts rows by selected columns
-          if (!grid.options.externalSort && angular.isFunction) {
-            grid.registerRowsProcessor(grid.sortByColumn);
+          if (grid.options.externalSort && angular.isFunction(grid.options.externalSort)) {
+            grid.registerRowsProcessor(grid.options.externalSort);
           }
           else {
-            grid.registerRowsProcessor(grid.options.externalSort);
+            grid.registerRowsProcessor(grid.sortByColumn);
           }
 
           return grid;

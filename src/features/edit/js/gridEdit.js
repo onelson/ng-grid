@@ -86,22 +86,25 @@
           var promises = [];
 
           col.enableCellEdit = colDef.enableCellEdit !== undefined ?
-            colDef.enableCellEdit : gridOptions.enableCellEdit;
+            colDef.enableCellEdit : gridOptions.enableCellEdit; 
 
           col.cellEditableCondition = colDef.cellEditableCondition || gridOptions.cellEditableCondition || 'true';
 
           // allow for editableCellTemplate html or editableCellTemplateUrl
           if (col.enableCellEdit) {
-            if (colDef.editableCellTemplate) {
-              col.editableCellTemplate = colDef.editableCellTemplate;
+            if (!colDef.editableCellTemplate) {
+              colDef.editableCellTemplate = 'ui-grid/cellTextEditor';
             }
-            else {
-              var promise = colDef.editableCellTemplateUrl ? gridUtil.getTemplate(colDef.editableCellTemplateUrl)
-                : gridUtil.getTemplate('ui-grid/cellTextEditor');
-              promise.then(function (html) {
-                col.editableCellTemplate = html;
+
+            gridUtil.getTemplate(colDef.editableCellTemplate)
+              .then(
+              function (template) {
+                col.editableCellTemplate = template;
+              },
+              function (res) {
+                // Todo handle response error here?
+                throw new Error("Couldn't fetch/use colDef.editableCellTemplate '" + colDef.editableCellTemplate + "'");
               });
-            }
           }
 
           //enableCellEditOnFocus can only be used if cellnav module is used
@@ -219,6 +222,7 @@
             var html;
             var origCellValue;
             var inEdit = false;
+            var isFocusedBeforeEdit = false;
             var cellModel;
 
             registerBeginEditEvents();
@@ -274,20 +278,22 @@
                   inEdit = true;
                   cancelBeginEditEvents();
                   cellElement = $compile(html)($scope.$new());
-                  angular.element($elm.children()[0]).addClass('ui-grid-cell-contents-hidden');
+                  var gridCellContentsEl = angular.element($elm.children()[0]);
+                  isFocusedBeforeEdit = gridCellContentsEl.is(':focus');
+                  gridCellContentsEl.addClass('ui-grid-cell-contents-hidden');
                   $elm.append(cellElement);
                 }
               );
 
               //stop editing when grid is scrolled
               var deregOnGridScroll = $scope.$on(uiGridConstants.events.GRID_SCROLL, function () {
-                endEdit();
+                endEdit(true);
                 deregOnGridScroll();
               });
 
               //end editing
-              var deregOnEndCellEdit = $scope.$on(uiGridEditConstants.events.END_CELL_EDIT, function () {
-                endEdit();
+              var deregOnEndCellEdit = $scope.$on(uiGridEditConstants.events.END_CELL_EDIT, function (evt,retainFocus) {
+                endEdit(retainFocus);
                 deregOnEndCellEdit();
               });
 
@@ -300,12 +306,18 @@
               $scope.$broadcast(uiGridEditConstants.events.BEGIN_CELL_EDIT);
             }
 
-            function endEdit() {
+            function endEdit(retainFocus) {
               if (!inEdit) {
                 return;
               }
+              var gridCellContentsEl = angular.element($elm.children()[0]);
+              //remove edit element
               angular.element($elm.children()[1]).remove();
-              angular.element($elm.children()[0]).removeClass('ui-grid-cell-contents-hidden');
+              gridCellContentsEl.removeClass('ui-grid-cell-contents-hidden');
+              if(retainFocus && isFocusedBeforeEdit){
+                gridCellContentsEl.focus();
+              }
+              isFocusedBeforeEdit = false;
               inEdit = false;
               registerBeginEditEvents();
             }
@@ -317,7 +329,7 @@
               cellModel.assign($scope, origCellValue);
               $scope.$apply();
 
-              endEdit();
+              endEdit(true);
             }
 
           }
@@ -342,8 +354,8 @@
    *
    */
   module.directive('uiGridTextEditor',
-    ['uiGridConstants', 'uiGridEditConstants', '$log', '$templateCache', '$compile',
-      function (uiGridConstants, uiGridEditConstants, $log, $templateCache, $compile) {
+    ['uiGridConstants', 'uiGridEditConstants',
+      function (uiGridConstants, uiGridEditConstants) {
         return{
           scope: true,
           compile: function () {
@@ -362,7 +374,7 @@
                   });
                 });
 
-                $scope.stopEdit = function () {
+                $scope.stopEdit = function() {
                   $scope.$emit(uiGridEditConstants.events.END_CELL_EDIT);
                 };
 

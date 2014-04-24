@@ -54,6 +54,9 @@ angular.module('ui.grid')
     // Sorting on by default
     this.enableSorting = true;
 
+    // Filtering off by default
+    this.enableFiltering = false;
+
     // Column menu can be used by default
     this.enableColumnMenu = true;
 
@@ -84,6 +87,9 @@ angular.module('ui.grid')
 
     // Custom template for header row
     this.headerTemplate = null;
+
+    // Template for rows
+    this.rowTemplate = 'ui-grid/ui-grid-row';
   }
 
   return GridOptions;

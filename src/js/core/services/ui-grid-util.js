@@ -131,7 +131,7 @@ function getWidthOrHeight( elem, name, extra ) {
  *  
  *  @description Grid utility functions
  */
-module.service('gridUtil', ['$window', '$document', '$http', '$templateCache', '$timeout', '$injector', function ($window, $document, $http, $templateCache, $timeout, $injector) {
+module.service('gridUtil', ['$log', '$window', '$document', '$http', '$templateCache', '$timeout', '$injector', '$q', function ($log, $window, $document, $http, $templateCache, $timeout, $injector, $q) {
   var s = {
 
     /**
@@ -259,8 +259,10 @@ module.service('gridUtil', ['$window', '$document', '$http', '$templateCache', '
      * @ngdoc method
      * @name getTemplate
      * @methodOf ui.grid.service:GridUtil
-     * @description Get's template from Url
+     * @description Get's template from cache / element / url
      *
+     * @param {string|element|promise} Either a string representing the template id, a string representing the template url,
+     *   an jQuery/Angualr element, or a promise that returns the template contents to use.
      * @returns {object} a promise resolving to template contents
      *
      * @example
@@ -270,14 +272,40 @@ module.service('gridUtil', ['$window', '$document', '$http', '$templateCache', '
         })
      </pre>
      */
-    getTemplate: function (url) {
-      return $http({ method: 'GET', url: url, cache: $templateCache })
+    getTemplate: function (template) {
+      // Try to fetch the template out of the templateCache
+      if ($templateCache.get(template)) {
+        return $q.when($templateCache.get(template));
+      }
+
+      // See if the template is itself a promise
+      if (template.hasOwnProperty('then')) {
+        return template;
+      }
+
+      // If the template is an element, return the element
+      try{
+        if (angular.element(template).length > 0) {
+          return $q.when(template);
+        }
+      }
+      catch(err){
+        //do nothing; not valid html
+      }
+
+      $log.debug('Fetching url', template);
+
+      // Default to trying to fetch the template as a url with $http
+      return $http({ method: 'GET', url: template})
         .then(
           function (result) {
-            return result.data.trim();
+            var templateHtml = result.data.trim();
+            //put in templateCache for next call
+            $templateCache.put(template, templateHtml);
+            return templateHtml;
           },
           function (err) {
-            throw "Could not get template " + url + ": " + err;
+            throw new Error("Could not get template " + template + ": " + err);
           }
         );
     },
