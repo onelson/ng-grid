@@ -304,7 +304,10 @@ module.exports = function(grunt) {
         files: '<%= jshint.gruntfile.src %>',
         tasks: ['jshint:gruntfile']
       },
-
+      test: {
+        files: util.testFiles.unit,
+        tasks: ['karma:single']
+      },
       ngtemplates: {
         // files: ['src/templates/**/*.html', 'src/features/*/templates/**/*.html'],
         files: '<%= ngtemplates.uigrid.src %>',
